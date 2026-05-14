@@ -1,0 +1,117 @@
+============================================================
+  QUIZ UYGULAMASI — KULLANIM KILAVUZU
+============================================================
+
+NEYE YARAR:
+Sinifinda quiz yapabilirsin. Sen "QuizBaslat" dosyasini cift
+tiklarsin, bilgisayarinda quiz arayuzu acilir. Quiz olusturursun,
+"Baslat" dersin, ogrenciler kendi telefonlarindan QR kodu okutup
+katilir. Bitince sen cevaplari okur, acik uclu sorulara puan
+verirsin.
+
+
+-------------------------------------------------------------
+  ILK KURULUM (TEK SEFERLIK, 5 DAKIKA)
+-------------------------------------------------------------
+
+1) Node.js'yi indir ve kur:
+   https://nodejs.org
+   (Buyuk yesil "LTS" butonuna tikla, indir, cift tikla,
+   "Next, Next, Finish" diyerek kur.)
+
+2) Bu klasoru bilgisayarinda istedigin yere koy
+   (Masaustu uygundur).
+
+3) "QuizBaslat.bat" dosyasini cift tikla.
+   Ilk acilista 1-2 dakika kurulum yapar, sonra hazirlanir.
+
+Tamam, bir daha bu adimlari yapmana gerek yok.
+
+
+-------------------------------------------------------------
+  HER QUIZ YAPMA OTURUMU
+-------------------------------------------------------------
+
+1) "QuizBaslat.bat" dosyasini cift tikla.
+   - Siyah bir pencere acilir (bu pencereyi KAPATMA).
+   - Tarayicinda quiz arayuzu otomatik acilir.
+
+2) "Yeni Quiz" diyerek quiz olustur:
+   - Quiz adi yaz (orn. "7B Fen — 1. Test")
+   - Sure modunu sec (suresiz / toplam dakika / soru basina sn)
+   - "+ Coktan Secmeli" / "+ Dogru-Yanlis" / "+ Acik Uclu"
+     butonlariyla sorulari ekle
+   - Her sorunun yanindaki puan kismi, soruya kac puan
+     verecegini belirler
+   - "Kaydet" dedigin anda quiz hazir
+
+3) Ana sayfaya don. Quizin yaninda "Baslat" dugmesine bas.
+   - Ekranda 6 haneli bir kod ve bir QR kod cikar
+   - Ogrenciler ayni WiFi'ye baglaniyor olmali
+     (Okul WiFi'si veya senin telefon hotspot'in)
+   - Kameralarini QR'a tutsunlar ya da koda elle yazsinlar
+
+4) Ogrenciler isim + sinif + kod yazip "Basla" dedigi anda
+   quiz onlara acilir. Cevapliyorlar, "Teslim Et" diyorlar.
+   - Senin ekraninda canli olarak "kac kisi katildi /
+     kac kisi teslim etti" gorunur.
+
+5) Quiz bitince ya kendileri teslim eder ya da sen
+   "Oturumu Bitir" dersin.
+
+6) Sonuclari oku:
+   - "Canli Sonuclari Gor" -> tum ogrenciler listede
+   - Bir ogrenciye tikla, tum cevaplari gor
+   - Acik uclu sorularda yandaki "Puan" kutusuna sen
+     puan yazip "Puanlamayi Kaydet" de
+   - Cogu/dogru sorular zaten otomatik puanlanir
+
+7) Bitirdiginde siyah pencereyi kapat. Sunucu durur.
+
+
+-------------------------------------------------------------
+  SIKCA SORULAN
+-------------------------------------------------------------
+
+S: Ogrencilerim QR'i okutamiyor?
+C: Bir ogrencinin telefonu QR okumuyorsa, ekrandaki adresi
+   elle yazabilirler (orn. http://192.168.1.42:3000).
+   Veya 6 haneli kodla katilim ekranina gec.
+
+S: WiFi yok, ne yaparim?
+C: Telefonundan hotspot ac, sen ve ogrenciler ayni
+   hotspot'a baglanin. iPhone: Ayarlar > Kisisel Erisim Noktasi.
+
+S: Quiz yariyolda kapatilirsa?
+C: Ogrenci tarayiciyi yanlislikla kapatirsa, ayni isim
+   ve kodu ile geri girer, kaldigi yerden devam eder.
+
+S: Verilerim nerede?
+C: Klasor icindeki "data\quiz.db.json" dosyasinda.
+   Yedeklemek istersen bu dosyayi kopyala.
+
+S: Yeni quiz olusturup baslattim, eski cevaplar kayboldu mu?
+C: Hayir, gecmis oturumlar "Gecmis Oturumlar" sekmesinde
+   kalir. Istedigin zaman acip okuyabilirsin.
+
+S: Senin bilgisayarinda kapaliyken ogrenciler ne gorur?
+C: Hicbir sey, sayfa acilmaz. Sen quizi baslattiginda
+   ve bilgisayarini WiFi'de tuttugun surece calisir.
+
+
+-------------------------------------------------------------
+  ESKIDEN-MEYDANA SORUN OLURSA
+-------------------------------------------------------------
+
+* QuizBaslat acilmiyor, hata veriyor:
+  - Node.js kurulu mu? Kontrol et: cmd ac, "node --version" yaz.
+  - Calismiyor mu? Node.js'yi tekrar kur.
+
+* Ogrenciler "baglanamiyor" diyor:
+  - Hepsi ayni WiFi'de mi?
+  - Bilgisayarinda guvenlik duvari, 3000 portunu engelliyor
+    olabilir. Windows guvenlik duvari soracaktir: "izin ver".
+
+* QR kod gorunmuyor:
+  - QuizBaslat'taki siyah penceredeki adresi tarayiciya
+    elle yapistirip kontrol et: http://localhost:3000

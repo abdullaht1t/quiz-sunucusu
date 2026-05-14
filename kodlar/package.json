@@ -1,0 +1,36 @@
+{
+  "name": "quiz-app",
+  "version": "0.1.0",
+  "description": "Sınıf içi yerel ağ quiz uygulaması (Kahoot benzeri)",
+  "main": "server/server.js",
+  "bin": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js",
+    "build:win": "pkg . --targets node18-win-x64 --output dist/QuizSunucusu.exe"
+  },
+  "pkg": {
+    "assets": [
+      "public/**/*",
+      "node_modules/socket.io/client-dist/**/*",
+      "node_modules/engine.io/build/**/*",
+      "node_modules/socket.io-parser/build/**/*"
+    ],
+    "scripts": [
+      "server/**/*.js"
+    ],
+    "outputPath": "dist"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.5.1",
+    "lowdb": "^1.0.0",
+    "nanoid": "^3.3.7",
+    "open": "^8.4.2",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^5.16.1"
+  }
+}

@@ -1,0 +1,28 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Kullanıcı verileri — runtime'da oluşur, repo'da yer almaz
+kodlar/data/
+
+# Build çıktıları — release'lerde yayımlanır, repo'da yer almaz
+kodlar/dist/
+windows/QuizSunucusu.exe
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Yedekler
+*.backup-*
+*.bak
+
+# pkg cache
+.pkg-cache/
+
+# Claude Code yerel ayarları
+.claude/

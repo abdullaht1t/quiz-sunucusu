@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quiz Yönetim</title>
+<script src="/js/theme.js"></script>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">📚 Quiz Yönetim</div>
+  <nav>
+    <a href="#/" data-route="/">Ana Sayfa</a>
+    <a href="#/quizzes" data-route="/quizzes">Quizler</a>
+    <a href="#/sessions" data-route="/sessions">Geçmiş Oturumlar</a>
+    <a href="#/students" data-route="/students">Öğrenciler</a>
+    <a href="#/logs" data-route="/logs">Loglar</a>
+    <a href="#/settings" data-route="/settings">Ayarlar</a>
+  </nav>
+</header>
+
+<main id="app" class="container"></main>
+<div id="toastHost" aria-live="polite"></div>
+
+<!-- ============================================================
+     DASHBOARD
+     ============================================================ -->
+<template id="tpl-dashboard">
+  <h1>Ana Sayfa</h1>
+
+  <div class="card active-session-card" data-active="false">
+    <div class="active-empty">
+      <h3>Şu anda aktif quiz yok</h3>
+      <p class="muted">Aşağıdaki quiz listesinden birini "Başlat" diyerek yayına alabilirsin. Öğrenciler aynı WiFi/hotspot üzerinden katılır.</p>
+    </div>
+    <div class="active-live hidden">
+      <div class="active-row">
+        <div>
+          <h3 class="muted">Aktif Quiz</h3>
+          <h2 id="activeTitle"></h2>
+          <div class="big-code" id="activeCode">------</div>
+          <div class="muted small" id="activeUrls"></div>
+          <div class="mt-16"><span class="badge" id="activeStatus">0 katılımcı</span></div>
+          <div class="row mt-16">
+            <button class="btn-danger" id="endSessionBtn">Oturumu Bitir</button>
+            <button class="btn-secondary" id="viewSessionBtn">Canlı Sonuçları Gör</button>
+          </div>
+        </div>
+        <div class="qr-box"><img id="activeQr" alt="QR" /></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <h2 style="margin:0;">Hızlı Eylemler</h2>
+      <div class="spacer"></div>
+      <button class="btn-good" id="startRegBtn">📋 Kayıt Başlat</button>
+      <button id="newQuizBtn">+ Yeni Quiz</button>
+    </div>
+    <p class="muted small mt-8">"Kayıt Başlat" → öğrenciler QR'dan ad-soyad-sınıf yazıp 6 haneli numaralarını alır. Sonra quizleri numarayla çözer.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px;">Quizlerim</h2>
+    <div id="dashQuizList"></div>
+  </div>
+
+  <div class="card">
+    <h2>Son Oturumlar</h2>
+    <div id="dashSessionList"></div>
+  </div>
+</template>
+
+<!-- Quiz silme modali — sonuçlar için kullanıcıya sor -->
+<template id="tpl-delete-quiz-modal">
+  <div class="modal-backdrop">
+    <div class="modal-card card">
+      <h2 id="dqTitle">Quiz silinsin mi?</h2>
+      <p class="muted" id="dqImpact"></p>
+      <p class="mt-16"><strong>Quiz ve geçmiş oturumları her durumda silinecek.</strong></p>
+      <p class="muted small">Öğrencilerin bu quizden aldığı puanlar ne olsun?</p>
+      <div class="row mt-16">
+        <button class="btn-secondary" id="dqCancel">İptal</button>
+        <div class="spacer"></div>
+        <button class="btn-secondary" id="dqKeep">Puanları sakla</button>
+        <button class="btn-danger" id="dqWipe">Quiz + puanları sil</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Quiz başlatma modali (hibrit toggle için) -->
+<template id="tpl-start-quiz-modal">
+  <div class="modal-backdrop">
+    <div class="modal-card card">
+      <h2 id="smQuizTitle">Quiz başlat</h2>
+      <p class="muted">Bu quiz yayına alınacak. Aktif başka bir oturum varsa bitirilecek.</p>
+      <label class="row" style="margin:14px 0;">
+        <input type="checkbox" id="smAcceptReg" style="width:auto;">
+        <span>Yeni kayıtları da kabul et (hibrit mod)</span>
+      </label>
+      <p class="muted small">Hibrit modda: kayıtlı olmayan öğrenciler de ad-soyad-sınıf yazarak numara alıp doğrudan quize girebilir. Kapalıysa sadece numarası olan öğrenciler katılır.</p>
+      <div class="row mt-16">
+        <div class="spacer"></div>
+        <button class="btn-secondary" id="smCancel">İptal</button>
+        <button class="btn-good" id="smStart">Quizi Başlat →</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Kayıt oturumu paneli -->
+<template id="tpl-registration">
+  <div id="crumbsHere"></div>
+  <h1>📋 Kayıt Oturumu</h1>
+  <div class="card reg-banner" data-mode="registration">
+    <div class="active-row">
+      <div>
+        <div class="reg-pill">KAYIT MODU</div>
+        <h3 class="muted" style="margin-top:8px;">Kayıt kodu</h3>
+        <div class="big-code" id="regCode">------</div>
+        <div class="muted small" id="regUrls"></div>
+        <div class="mt-16">
+          <span class="badge good" id="regCount">0 yeni kayıt</span>
+        </div>
+        <div class="row mt-16">
+          <button class="btn-danger" id="endRegBtn">Kaydı Kapat</button>
+        </div>
+      </div>
+      <div class="qr-box"><img id="regQr" alt="QR"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <h2 style="margin:0;">Canlı kayıt akışı</h2>
+      <div class="spacer"></div>
+      <span class="muted small" id="regUpdated">Bekleniyor…</span>
+    </div>
+    <ul class="reg-feed" id="regFeed"></ul>
+  </div>
+</template>
+
+<!-- ============================================================
+     QUIZ LİSTESİ
+     ============================================================ -->
+<template id="tpl-quizzes">
+  <div class="row">
+    <h1 style="margin:0;">Quizler</h1>
+    <div class="spacer"></div>
+    <button id="newQuizBtn2">+ Yeni Quiz</button>
+  </div>
+  <div class="card mt-16">
+    <div id="quizFullList"></div>
+  </div>
+</template>
+
+<!-- ============================================================
+     QUIZ EDİTÖR
+     ============================================================ -->
+<template id="tpl-editor">
+  <div id="crumbsHere"></div>
+  <h1 id="editorTitle">Yeni Quiz</h1>
+  <div class="card">
+    <label>Quiz başlığı</label>
+    <input id="qTitle" placeholder="Örn: 7. Sınıf Fen — Madde ve Isı" />
+
+    <div class="row mt-16">
+      <div style="flex:1;">
+        <label>Süre modu</label>
+        <select id="qTimeMode">
+          <option value="unlimited">Süresiz</option>
+          <option value="total">Toplam süre (dk)</option>
+          <option value="per_question">Soru başına süre (sn)</option>
+        </select>
+      </div>
+      <div style="flex:1;" id="timeValueWrap">
+        <label id="timeValueLabel">Değer</label>
+        <input id="qTimeValue" type="number" min="1" value="20" />
+      </div>
+    </div>
+
+    <div class="row mt-16">
+      <label class="row" style="margin:0;"><input type="checkbox" id="qShuffleQ" style="width:auto;"> Soruları karıştır</label>
+      <label class="row" style="margin:0;"><input type="checkbox" id="qShuffleOpt" style="width:auto;"> Şıkları karıştır</label>
+    </div>
+  </div>
+
+  <div id="questionsList"></div>
+
+  <div class="card row">
+    <button class="btn-secondary" data-add="multiple_choice">+ Çoktan Seçmeli</button>
+    <button class="btn-secondary" data-add="true_false">+ Doğru/Yanlış</button>
+    <button class="btn-secondary" data-add="open_ended">+ Açık Uçlu</button>
+    <div class="spacer"></div>
+    <button class="btn-danger" id="cancelEdit">İptal</button>
+    <button class="btn-good" id="saveQuiz">Kaydet</button>
+  </div>
+</template>
+
+<template id="tpl-question-mc">
+  <div class="card q-card" data-type="multiple_choice">
+    <div class="row">
+      <strong class="muted q-index">Soru</strong>
+      <span class="badge">Çoktan Seçmeli</span>
+      <div class="spacer"></div>
+      <label class="inline">Puan: <input type="number" class="q-points" value="1" min="0" style="width:70px;"></label>
+      <button class="btn-danger small q-remove">Sil</button>
+    </div>
+    <textarea class="q-text" placeholder="Soru metni"></textarea>
+    <div class="q-image-block">
+      <div class="q-image-preview hidden">
+        <img class="q-image-thumb" alt="Soru resmi" />
+        <button type="button" class="btn-danger small remove-img">Resmi kaldır</button>
+      </div>
+      <button type="button" class="btn-secondary small add-img">🖼 Soruya resim ekle</button>
+      <input type="file" class="img-input" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
+    </div>
+    <div class="options-editor"></div>
+    <button class="btn-secondary small mt-8 add-option">+ Şık ekle</button>
+  </div>
+</template>
+
+<template id="tpl-question-tf">
+  <div class="card q-card" data-type="true_false">
+    <div class="row">
+      <strong class="muted q-index">Soru</strong>
+      <span class="badge">Doğru/Yanlış</span>
+      <div class="spacer"></div>
+      <label class="inline">Puan: <input type="number" class="q-points" value="1" min="0" style="width:70px;"></label>
+      <button class="btn-danger small q-remove">Sil</button>
+    </div>
+    <textarea class="q-text" placeholder="Önerme metni"></textarea>
+    <div class="q-image-block">
+      <div class="q-image-preview hidden">
+        <img class="q-image-thumb" alt="Soru resmi" />
+        <button type="button" class="btn-danger small remove-img">Resmi kaldır</button>
+      </div>
+      <button type="button" class="btn-secondary small add-img">🖼 Soruya resim ekle</button>
+      <input type="file" class="img-input" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
+    </div>
+    <div class="row mt-8">
+      <label class="row"><input type="radio" class="q-tf" value="true" style="width:auto;"> Doğru</label>
+      <label class="row"><input type="radio" class="q-tf" value="false" style="width:auto;"> Yanlış</label>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-question-open">
+  <div class="card q-card" data-type="open_ended">
+    <div class="row">
+      <strong class="muted q-index">Soru</strong>
+      <span class="badge">Açık Uçlu</span>
+      <div class="spacer"></div>
+      <label class="inline">Puan: <input type="number" class="q-points" value="5" min="0" style="width:70px;"></label>
+      <button class="btn-danger small q-remove">Sil</button>
+    </div>
+    <textarea class="q-text" placeholder="Soru metni"></textarea>
+    <div class="q-image-block">
+      <div class="q-image-preview hidden">
+        <img class="q-image-thumb" alt="Soru resmi" />
+        <button type="button" class="btn-danger small remove-img">Resmi kaldır</button>
+      </div>
+      <button type="button" class="btn-secondary small add-img">🖼 Soruya resim ekle</button>
+      <input type="file" class="img-input" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
+    </div>
+    <p class="muted small mt-8">Bu soru quiz bitiminde tarafından elle puanlanacak.</p>
+  </div>
+</template>
+
+<!-- ============================================================
+     OTURUM DETAYI (katılımcı listesi)
+     ============================================================ -->
+<template id="tpl-session-detail">
+  <div id="crumbsHere"></div>
+  <h1 id="sessTitle">Oturum</h1>
+  <div class="card">
+    <div class="row">
+      <div>
+        <h3 class="muted">Quiz</h3>
+        <div id="sessQuiz" style="font-size:18px;font-weight:600;"></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="text-right">
+        <h3 class="muted">Kod</h3>
+        <div class="big-code" style="font-size:32px;" id="sessCode"></div>
+      </div>
+      <div class="spacer"></div>
+      <a id="csvDownload" class="btn btn-secondary">CSV İndir</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Katılımcılar</h2>
+    <table>
+      <thead><tr><th>Ad Soyad</th><th>Sınıf</th><th>Durum</th><th>Puan</th><th></th></tr></thead>
+      <tbody id="sessParticipants"></tbody>
+    </table>
+  </div>
+</template>
+
+<!-- ============================================================
+     ÖĞRENCİ PROFİLİ (yeni — F1 fix)
+     ============================================================ -->
+<template id="tpl-student-profile">
+  <div id="crumbsHere"></div>
+  <div class="card">
+    <div class="student-header">
+      <div class="student-avatar" id="stuAvatar">?</div>
+      <div style="flex:1;min-width:200px;">
+        <h1 id="stuName" style="margin-bottom:4px;">Öğrenci</h1>
+        <div class="row" style="gap:8px;">
+          <span class="badge" id="stuSinif"></span>
+          <span class="student-num hidden" id="stuNumDisplay"></span>
+          <span class="muted small" id="stuStats"></span>
+        </div>
+      </div>
+      <div>
+        <button class="btn-danger small" id="deleteStudentBtn">🗑 Öğrenciyi Sil</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Quiz Geçmişi</h2>
+    <p class="muted small">Bir sonucu silmek = o öğrenciye o sınava <strong>tekrar girme</strong> izni vermek.</p>
+    <div id="stuSessionList"></div>
+  </div>
+</template>
+
+<!-- ============================================================
+     Q&A DETAY (compact accordion — kanonik route)
+     ============================================================ -->
+<template id="tpl-qa-detail">
+  <div id="crumbsHere"></div>
+  <div class="card">
+    <div class="row">
+      <div>
+        <h1 id="qaName" style="margin-bottom:4px;">Öğrenci</h1>
+        <div class="muted small" id="qaMeta"></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="text-right">
+        <div class="muted small">Toplam Puan</div>
+        <div style="font-size:32px;font-weight:800;color:var(--accent);" id="qaScore">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:12px;">
+      <h2 style="margin:0;">Cevaplar</h2>
+      <div class="spacer"></div>
+      <button class="btn-secondary small" id="expandAll">Tümünü Aç</button>
+      <button class="btn-secondary small" id="collapseAll">Tümünü Kapat</button>
+      <button class="btn-good" id="saveGrading">Puanlamayı Kaydet</button>
+    </div>
+    <div id="answersList"></div>
+  </div>
+</template>
+
+<!-- ============================================================
+     GEÇMİŞ OTURUMLAR
+     ============================================================ -->
+<template id="tpl-sessions">
+  <h1>Geçmiş Oturumlar</h1>
+  <div class="card">
+    <div id="sessionListAll"></div>
+  </div>
+</template>
+
+<!-- ============================================================
+     ÖĞRENCİLER
+     ============================================================ -->
+<template id="tpl-students">
+  <h1>Öğrenciler</h1>
+  <div class="card">
+    <div class="row">
+      <h2 style="margin:0;">Yeni öğrenci ekle</h2>
+      <div class="spacer"></div>
+      <button class="btn-good small" id="addStudentBtn">+ Ekle</button>
+    </div>
+    <details class="custom-theme mt-8" id="addStudentForm">
+      <summary>Manuel öğrenci ekle (numarayı ben vereyim)</summary>
+      <div class="row mt-16">
+        <div style="flex:1;min-width:160px;">
+          <label>Ad Soyad</label>
+          <input id="newStuName" placeholder="Ali Yılmaz" maxlength="60" />
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label>Sınıf</label>
+          <input id="newStuSinif" placeholder="7-B" maxlength="20" />
+        </div>
+        <div style="flex:0 0 130px;">
+          <label>Numara (boş ise otomatik)</label>
+          <input id="newStuId" placeholder="otomatik" maxlength="6" />
+        </div>
+        <div style="align-self:end;">
+          <button class="btn-good" id="saveStuBtn">Kaydet</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Tüm Öğrenciler</h2>
+    <div id="studentListAll"></div>
+  </div>
+</template>
+
+<!-- ============================================================
+     LOGLAR
+     ============================================================ -->
+<template id="tpl-logs">
+  <div class="row">
+    <h1 style="margin:0;">Log Kayıtları</h1>
+    <div class="spacer"></div>
+    <select id="logFilter" style="width:auto;">
+      <option value="">Tümü</option>
+      <option value="error">Hatalar</option>
+      <option value="warn">Uyarılar</option>
+      <option value="info">Bilgiler</option>
+    </select>
+    <select id="logSource" style="width:auto;">
+      <option value="">Her kaynak</option>
+      <option value="admin">Admin</option>
+      <option value="student">Öğrenci</option>
+      <option value="server">Sunucu</option>
+      <option value="client">Tarayıcı (admin)</option>
+    </select>
+    <button class="btn-secondary small" id="logRefresh">Yenile</button>
+    <button class="btn-danger small" id="logClear">Tümünü Temizle</button>
+  </div>
+  <p class="muted small mt-8">Son 200 log gösteriliyor. Hatalar üstte vurgulanır.</p>
+  <div class="card">
+    <div id="logList"></div>
+  </div>
+</template>
+
+<!-- ============================================================
+     AYARLAR
+     ============================================================ -->
+<template id="tpl-settings">
+  <h1>Ayarlar</h1>
+
+  <div class="card">
+    <h2>Tema</h2>
+    <p class="muted">Cihazda hatırlanır. Anında uygulanır.</p>
+    <div class="theme-grid" id="themeGrid"></div>
+
+    <details class="custom-theme mt-16">
+      <summary>Özel renkler</summary>
+      <p class="muted small mt-8">Aşağıdaki renkleri seç, "Uygula" de. İstediğin gibi karıştırabilirsin.</p>
+      <div class="custom-grid">
+        <label>Arka plan başlangıç <input type="color" id="cBg1" /></label>
+        <label>Arka plan bitiş <input type="color" id="cBg2" /></label>
+        <label>Panel (kart) <input type="color" id="cPanel" /></label>
+        <label>Vurgu (accent) <input type="color" id="cAccent" /></label>
+        <label>Metin <input type="color" id="cText" /></label>
+      </div>
+      <div class="row mt-16">
+        <button class="btn-secondary" id="resetCustom">Varsayılana Dön</button>
+        <div class="spacer"></div>
+        <button class="btn-good" id="applyCustom">Özel temayı uygula</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Veri</h2>
+    <p class="muted small">Tüm quiz, oturum, sonuç dosyası: <code id="dataPath">data/quiz.db.json</code></p>
+    <p class="muted small">Yedek almak için bu dosyayı kopyala. Geri yüklemek için üzerine yapıştır ve uygulamayı yeniden başlat.</p>
+  </div>
+</template>
+
+<!-- ============================================================
+     BREADCRUMB
+     ============================================================ -->
+<template id="tpl-crumbs">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <ol id="crumbList"></ol>
+  </nav>
+</template>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

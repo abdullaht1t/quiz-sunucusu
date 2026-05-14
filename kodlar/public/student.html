@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Quiz</title>
+<script src="/js/theme.js"></script>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="student-body">
+<div id="app" class="container narrow"></div>
+<div id="toastHost" aria-live="polite"></div>
+
+<template id="tpl-no-active">
+  <div class="card center" style="padding:48px 20px;">
+    <h1 style="font-size:48px;margin-bottom:8px;">📚</h1>
+    <h2>Şu anda aktif oturum yok</h2>
+    <p class="muted">Öğretmenin başlatmasını bekle. Bu sayfa otomatik yenilenecek.</p>
+  </div>
+</template>
+
+<!-- Quiz join (numara veya yeni kayıt) -->
+<template id="tpl-join">
+  <div class="card join-card">
+    <h1 class="center">Quiz'e Katıl</h1>
+    <p class="muted center" id="joinTitle"></p>
+
+    <div class="seg" id="joinTabs" role="tablist">
+      <button class="seg-btn active" data-tab="have" role="tab">🔢 Numaram var</button>
+      <button class="seg-btn" data-tab="new" role="tab" id="tabNew">✨ Yeni kayıt</button>
+    </div>
+
+    <!-- Sekme: Numaram var -->
+    <section class="seg-panel" data-panel="have">
+      <!-- Mod: numara ile -->
+      <div data-mode="num">
+        <label class="center">6 haneli öğrenci numaran</label>
+        <div class="otp" id="otpStudent">
+          <input inputmode="numeric" maxlength="1" /><input inputmode="numeric" maxlength="1" />
+          <input inputmode="numeric" maxlength="1" /><input inputmode="numeric" maxlength="1" />
+          <input inputmode="numeric" maxlength="1" /><input inputmode="numeric" maxlength="1" />
+        </div>
+        <button id="loginBtn" class="btn-cta mt-16">Başla →</button>
+        <p class="center mt-8">
+          <a href="#" id="forgotLink" class="muted small">Numaramı unuttum — adımla gireyim</a>
+        </p>
+      </div>
+
+      <!-- Mod: isim+sınıf ile -->
+      <div data-mode="name" class="hidden">
+        <label>Ad Soyad (kayıt olurken yazdığın)</label>
+        <input id="loginName" placeholder="Örn: Ali Yılmaz" autocomplete="name" maxlength="60" />
+        <label class="mt-16">Sınıf</label>
+        <input id="loginSinif" placeholder="Örn: 7-B" maxlength="20" />
+        <button id="loginByNameBtn" class="btn-cta mt-16">Başla →</button>
+        <p class="center mt-8">
+          <a href="#" id="backToNumLink" class="muted small">← Numarayla girmek istiyorum</a>
+        </p>
+      </div>
+
+      <p class="muted small center mt-8" id="haveHint">Numaran ve adınla girmek de mümkün. Hiçbiri yoksa "Yeni kayıt" sekmesini dene.</p>
+    </section>
+
+    <!-- Sekme: Yeni kayıt -->
+    <section class="seg-panel hidden" data-panel="new">
+      <label>Ad Soyad</label>
+      <input id="fName" placeholder="Örn: Ali Yılmaz" autocomplete="name" maxlength="60" />
+      <label class="mt-16">Sınıf</label>
+      <input id="fSinif" placeholder="Örn: 7-B" maxlength="20" />
+      <button id="registerBtn" class="btn-cta mt-16">Numara al ve başla →</button>
+      <p class="muted small center mt-8">Sana özel 6 haneli numara verilecek. Sonraki quizlerde bunu kullan.</p>
+    </section>
+
+    <p id="joinError" class="error hidden mt-16"></p>
+  </div>
+</template>
+
+<!-- Kayıt sonrası: büyük numara ekranı -->
+<template id="tpl-reg-done">
+  <div class="card center join-card" data-mode="registration">
+    <div class="reg-pill">KAYIT BAŞARILI</div>
+    <h1 class="mt-16">Hoş geldin, <span id="rdName"></span>!</h1>
+    <p class="muted">Sana özel numaran:</p>
+    <div class="big-code big-code-xl" id="rdNumber">------</div>
+    <p class="muted">⚠️ Bu numarayı not al veya ekran fotosu çek. Bir sonraki sınava bununla gireceksin.</p>
+    <button id="continueBtn" class="btn-cta mt-16">Numarayı not aldım →</button>
+  </div>
+</template>
+
+<!-- Kayıt sonrası bekleme (kayıt oturumu hâlâ açık) -->
+<template id="tpl-wait-quiz">
+  <div class="card center" style="padding:32px;">
+    <h1 style="font-size:42px;margin-bottom:8px;">⏳</h1>
+    <h2>Hazırsın!</h2>
+    <p class="muted">Numaran kayıtlı. Öğretmenin quizi başlatmasını bekle.</p>
+    <p class="mt-16">
+      <span class="muted small">Senin numaran:</span><br>
+      <span class="big-code" id="myStoredNum" style="font-size:36px;">------</span>
+    </p>
+    <p class="muted small mt-16">Quiz başlayınca bu sayfa otomatik açılacak. Sayfayı açık tut.</p>
+  </div>
+</template>
+
+<!-- Kayıt-only mode (kayıt oturumunda) -->
+<template id="tpl-reg-only">
+  <div class="card join-card" data-mode="registration">
+    <div class="reg-pill center">KAYIT</div>
+    <h1 class="center mt-16">Numaranı al</h1>
+    <p class="muted center">Öğretmenin şu an kayıt oturumu açtı. Bilgilerini gir, sana özel numara verilecek.</p>
+
+    <label class="mt-16">Ad Soyad</label>
+    <input id="rfName" placeholder="Örn: Ali Yılmaz" autocomplete="name" maxlength="60" />
+    <label class="mt-16">Sınıf</label>
+    <input id="rfSinif" placeholder="Örn: 7-B" maxlength="20" />
+    <button id="regOnlyBtn" class="btn-cta mt-16">Numara al →</button>
+    <p id="regError" class="error hidden mt-16"></p>
+  </div>
+</template>
+
+<!-- Quiz ekranı -->
+<template id="tpl-quiz">
+  <div id="quizHeader" class="quiz-header">
+    <div class="muted small" id="qProgress">1 / 5</div>
+    <div id="timerWrap" class="hidden">
+      <div class="timer-label" id="timerLabel">00:00</div>
+      <div class="timer-bar"><div id="timerFill"></div></div>
+    </div>
+  </div>
+  <div id="questionArea"></div>
+  <div class="row mt-16">
+    <button id="prevBtn" class="btn-secondary">← Geri</button>
+    <div class="spacer"></div>
+    <button id="nextBtn">İleri →</button>
+    <button id="submitBtn" class="btn-good hidden">Teslim Et ✓</button>
+  </div>
+</template>
+
+<template id="tpl-done">
+  <div class="card center" style="padding:32px;">
+    <h1>✅</h1>
+    <h2>Quiz teslim edildi</h2>
+    <p class="muted" id="doneMsg"></p>
+    <p id="doneScore" class="big-code" style="font-size:48px;"></p>
+  </div>
+</template>
+
+<!-- Sınava 2. kez girme engeli -->
+<template id="tpl-already-taken">
+  <div class="card center" style="padding:32px;">
+    <h1>🔒</h1>
+    <h2>Bu sınava zaten girdin</h2>
+    <p class="muted">Bu quizi daha önce teslim ettin. Tekrar girmek istiyorsan öğretmenine söyle, eski sonucunu silebilir.</p>
+    <button id="backToStart" class="btn-secondary mt-16">Tamam</button>
+  </div>
+</template>
+
+<script src="/js/student.js"></script>
+</body>
+</html>
